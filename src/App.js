@@ -12,8 +12,6 @@ function App() {
   const [imgUrl, setImgUrl] = useState(null)
   const [imgColours, setImgColours] = useState([])
 
-  console.log(imgColours)
-
   return (
     <div className="App">
       <header className="App-header">

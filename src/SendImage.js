@@ -89,13 +89,27 @@ const SendImage = ({ img, colours }) => {
     }
   }
 
+  const formButtonStyle = { width: 100, padding: 5 }
+
   return (
-    <div style={{ display: "flex" }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
       <form onSubmit={handlePreview}>
-        <button type="submit">Upload Image</button>
+        <button style={formButtonStyle} type="submit">
+          Upload Image
+        </button>
       </form>
       {imageSrc && <img src={imageSrc} alt="Uploaded" />}
-      <button onClick={handleCreateStencil}>Create stencil</button>
+      <button style={formButtonStyle} onClick={handleCreateStencil}>
+        Create stencil
+      </button>
     </div>
   )
 }

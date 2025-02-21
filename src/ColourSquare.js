@@ -45,7 +45,6 @@ const ColourSquare = ({ rgb }) => {
 
 const ColourSquares = ({ colours }) => {
   const copyAllColours = (availableColours) => {
-    console.log("Should do something...", availableColours)
     const copyString = availableColours
       .map(([r, g, b]) => `:name [${r} ${g} ${b}]`)
       .join(" ")
