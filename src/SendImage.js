@@ -90,7 +90,7 @@ const SendImage = ({ img, colours }) => {
   }
 
   return (
-    <div>
+    <div style={{ display: "flex" }}>
       <form onSubmit={handlePreview}>
         <button type="submit">Upload Image</button>
       </form>

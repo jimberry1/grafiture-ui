@@ -33,7 +33,7 @@ const ColourSquare = ({ rgb }) => {
 
         <button
           onClick={() => {
-            navigator.clipboard.writeText(`${r} ${g} ${b}`)
+            navigator.clipboard.writeText(`[${r} ${g} ${b}]`)
           }}
         >
           Copy to clipboard
@@ -44,11 +44,22 @@ const ColourSquare = ({ rgb }) => {
 }
 
 const ColourSquares = ({ colours }) => {
+  const copyAllColours = (availableColours) => {
+    console.log("Should do something...", availableColours)
+    const copyString = availableColours
+      .map(([r, g, b]) => `:name [${r} ${g} ${b}]`)
+      .join(" ")
+    const fullString = "{" + copyString + "}"
+    navigator.clipboard.writeText(fullString)
+    console.log("copying", fullString)
+  }
+
   return (
     <div>
       {colours.map((colour, i) => (
         <ColourSquare rgb={colour} key={`rgb-col-${i}`} />
       ))}
+      <button onClick={() => copyAllColours(colours)}>Copy all colours</button>
     </div>
   )
 }
