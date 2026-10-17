@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { healthcheck, jobStatus, preview, submitJob } from "./api"
-import { paletteEntry, suggestPalette } from "./colours"
+import { paletteEntry, suggestPalette, withId } from "./colours"
 import { Step } from "./components/Controls"
-import { Alert, Logo, Spray } from "./components/Icons"
+import HistoryDrawer from "./components/HistoryDrawer"
+import { Alert, Clock, Gear, Logo, Spray } from "./components/Icons"
 import ImageStep from "./components/ImageStep"
 import PaletteStep, { DETAIL_LEVELS } from "./components/PaletteStep"
 import SheetsView from "./components/SheetsView"
 import Stage from "./components/Stage"
 import StencilStep, { STRATEGIES } from "./components/StencilStep"
+import SettingsDrawer from "./components/SettingsDrawer"
 import StyleStep, { DEFAULT_STYLE_OPTIONS, STYLES } from "./components/StyleStep"
+import { clearHistory, deleteHistoryEntry, loadHistory, loadPaints, saveHistoryEntry, savePaints, thumbnail } from "./storage"
 import useDebouncedEffect from "./useDebouncedEffect"
 
 function useApiStatus() {
@@ -65,6 +68,15 @@ export default function App() {
   const [tab, setTab] = useState("original")
   const [busy, setBusy] = useState({})
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
+
+  // header panels: saved paints and history, both kept in this browser
+  const [drawer, setDrawer] = useState(null)
+  const [paints, setPaints] = useState(loadPaints)
+  const [history, setHistory] = useState([])
+  useEffect(() => savePaints(paints), [paints])
+  useEffect(() => { loadHistory().then(setHistory) }, [])
+  const closeDrawer = useCallback(() => setDrawer(null), [])
 
   const minRegionSize = DETAIL_LEVELS[detail].minRegionSize
   const currentStyleOptions = styleOptions[style] || {}
@@ -74,7 +86,7 @@ export default function App() {
     [file, palette, maxSize, style, JSON.stringify(currentStyleOptions), minRegionSize]
   )
 
-  const onFile = (picked) => {
+  const loadFile = (picked) => {
     setFile(picked)
     const url = URL.createObjectURL(picked)
     setFileUrl(url)
@@ -83,6 +95,12 @@ export default function App() {
     probe.src = url
     setDims(null)
     setJob(null)
+    setNotice(null)
+    return url
+  }
+
+  const onFile = (picked) => {
+    loadFile(picked)
     setTab("original")
     setOpenStep(2)
   }
@@ -124,7 +142,7 @@ export default function App() {
   const sourceUrl = style !== "none" && styledUrl ? styledUrl : fileUrl
 
   const addColour = (rgb) => {
-    setPalette((p) => [...p, paletteEntry(rgb, p.map((c) => c.name))])
+    setPalette((p) => [...p, paletteEntry(rgb, p.map((c) => c.name), paints)])
     setOpenStep(3)
   }
 
@@ -133,7 +151,7 @@ export default function App() {
     setSuggesting(true)
     try {
       const colours = await suggestPalette(sourceUrl, count)
-      setPalette(colours.reduce((acc, rgb) => [...acc, paletteEntry(rgb, acc.map((c) => c.name))], []))
+      setPalette(colours.reduce((acc, rgb) => [...acc, paletteEntry(rgb, acc.map((c) => c.name), paints)], []))
       setTab("preview")
     } finally {
       setSuggesting(false)
@@ -142,12 +160,60 @@ export default function App() {
 
   const createStencil = async () => {
     setError(null)
+    setNotice(null)
     setJob({ status: "submitting" })
     setTab("sheets")
     try {
       setJob(await submitJob({ ...baseOptions, strategy, ...stencilOptions }))
     } catch (e) {
       setJob({ status: "failed", error: e.message })
+    }
+  }
+
+  // remember each finished stencil, with everything needed to come back to it
+  const saved = useRef(new Set())
+  useEffect(() => {
+    if (job?.status !== "done" || saved.current.has(job.id) || !file) return
+    saved.current.add(job.id)
+    thumbnail(fileUrl).then((thumb) =>
+      saveHistoryEntry({
+        id: job.id,
+        createdAt: Date.now(),
+        file,
+        fileName: file.name,
+        thumb,
+        palette: palette.map(({ name, rgb }) => ({ name, rgb })),
+        style,
+        styleOptions: currentStyleOptions,
+        maxSize,
+        detail,
+        strategy,
+        stencilOptions,
+        sheetCount: job.manifest.stats["sheet-count"],
+      }).then(() => loadHistory().then(setHistory))
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job])
+
+  const restore = async (entry) => {
+    setDrawer(null)
+    loadFile(new File([entry.file], entry.fileName, { type: entry.file.type }))
+    setMaxSize(entry.maxSize)
+    setStyle(entry.style)
+    setStyleOptions((all) => ({ ...all, [entry.style]: entry.styleOptions }))
+    setPalette(entry.palette.map(withId))
+    setDetail(entry.detail)
+    setStrategy(entry.strategy)
+    setStencilOptions(entry.stencilOptions || {})
+    setOpenStep(4)
+    saved.current.add(entry.id)
+    try {
+      const status = await jobStatus(entry.id)
+      setJob(status)
+      setTab("sheets")
+    } catch {
+      setTab("preview")
+      setNotice("The server has cleared these sheets. Everything else is restored: press Create stencil to make them again, identical to before.")
     }
   }
 
@@ -180,11 +246,29 @@ export default function App() {
           <span className="brand-mark"><Logo size={18} /></span>
           grafiture <small>stencil studio</small>
         </div>
-        <span className="status-pill" title="Connection to the grafiture API">
-          <span className={`status-dot${apiUp === true ? " is-up" : apiUp === false ? " is-down" : ""}`} />
-          {apiUp === false ? "API offline" : apiUp ? "Connected" : "Connecting…"}
-        </span>
+        <div className="topbar-actions">
+          <span className="status-pill" title="Connection to the grafiture API">
+            <span className={`status-dot${apiUp === true ? " is-up" : apiUp === false ? " is-down" : ""}`} />
+            {apiUp === false ? "API offline" : apiUp ? "Connected" : "Connecting…"}
+          </span>
+          <button type="button" className="header-btn" aria-expanded={drawer === "history"} onClick={() => setDrawer("history")}>
+            <Clock size={16} /> <span className="label">History</span>
+            {history.length > 0 && <span className="badge">{history.length}</span>}
+          </button>
+          <button type="button" className="header-btn" aria-expanded={drawer === "settings"} onClick={() => setDrawer("settings")}>
+            <Gear size={16} /> <span className="label">Settings</span>
+          </button>
+        </div>
       </header>
+
+      {drawer === "settings" && (
+        <SettingsDrawer paints={paints} palette={palette} onPaints={setPaints} onClose={closeDrawer} />
+      )}
+      {drawer === "history" && (
+        <HistoryDrawer entries={history} onOpen={restore} onClose={closeDrawer}
+          onDelete={(id) => deleteHistoryEntry(id).then(() => loadHistory().then(setHistory))}
+          onClear={() => clearHistory().then(() => setHistory([]))} />
+      )}
 
       <main className="workspace">
         <aside className="panel" aria-label="Stencil settings">
@@ -202,8 +286,8 @@ export default function App() {
 
           <Step number={3} title="Colours" open={openStep === 3} done={palette.length > 0} locked={!file} onToggle={() => setOpenStep(openStep === 3 ? 0 : 3)}
             summary={palette.length ? `${palette.length} colours · ${DETAIL_LEVELS[detail].label.toLowerCase()} detail` : "Pick the spray colours"}>
-            <PaletteStep palette={palette} regions={regions} suggesting={suggesting} detail={detail}
-              onSuggest={suggest} onChange={setPalette} onDetail={setDetail} />
+            <PaletteStep palette={palette} paints={paints} regions={regions} suggesting={suggesting} detail={detail}
+              onSuggest={suggest} onChange={setPalette} onDetail={setDetail} onManagePaints={() => setDrawer("settings")} />
           </Step>
 
           <Step number={4} title="Stencil" open={openStep === 4} done={!!job?.manifest} locked={!file || palette.length === 0}
@@ -212,6 +296,7 @@ export default function App() {
           </Step>
 
           {error && <div className="alert" role="alert" style={{ marginTop: "var(--space-3)" }}><Alert size={18} /> {error}</div>}
+          {notice && <div className="notice" role="status" style={{ marginTop: "var(--space-3)" }}><Clock size={18} /> {notice}</div>}
 
           <div className="panel-footer">
             <button type="button" className="btn btn-primary btn-lg btn-block" disabled={!canCreate} onClick={createStencil}>

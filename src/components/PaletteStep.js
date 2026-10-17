@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { fromHex, slug, toHex } from "../colours"
+import { fromHex, nameFor, paletteEntry, slug, toHex } from "../colours"
 import { Slider } from "./Controls"
 import { Copy, Pipette, Sparkle, Trash } from "./Icons"
 
@@ -12,11 +12,21 @@ export const DETAIL_LEVELS = [
   { label: "Every pixel", minRegionSize: 0 },
 ]
 
-export default function PaletteStep({ palette, regions, suggesting, detail, onSuggest, onChange, onDetail }) {
+export default function PaletteStep({ palette, paints, regions, suggesting, detail, onSuggest, onChange, onDetail, onManagePaints }) {
   const [count, setCount] = useState(4)
   const [copied, setCopied] = useState(false)
 
   const update = (id, patch) => onChange(palette.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+
+  // a colour changed with the picker is renamed to match its new value
+  const recolour = (id, rgb) => {
+    const taken = palette.filter((c) => c.id !== id).map((c) => c.name)
+    update(id, { rgb, name: nameFor(rgb, taken, paints) })
+  }
+
+  const inPalette = new Set(palette.map((c) => toHex(c.rgb)))
+  const addPaint = (paint) =>
+    onChange([...palette, paletteEntry(paint.rgb, palette.map((c) => c.name), [paint])])
 
   const rename = (id, raw) => {
     const name = slug(raw) || "colour"
@@ -35,6 +45,24 @@ export default function PaletteStep({ palette, regions, suggesting, detail, onSu
 
   return (
     <>
+      <div className="subhead">
+        My paints
+        <button type="button" onClick={onManagePaints}>{paints.length ? "Manage" : "Add paints"}</button>
+      </div>
+      {paints.length ? (
+        <div className="paint-chips">
+          {paints.map((p) => (
+            <button key={p.id} type="button" className="paint-chip" disabled={inPalette.has(toHex(p.rgb))}
+              title={inPalette.has(toHex(p.rgb)) ? `${p.name} is in the palette` : `Add ${p.name}`} onClick={() => addPaint(p)}>
+              <i style={{ background: toHex(p.rgb) }} /> {p.name}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="field-hint" style={{ margin: "0 0 var(--space-3)" }}>Save the paints you own in Settings to pick them here.</p>
+      )}
+
+      <div className="subhead">From the image</div>
       <div className="palette-actions">
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSuggest(count)} disabled={suggesting}>
           {suggesting ? <span className="spinner" /> : <Sparkle size={15} />}
@@ -61,7 +89,7 @@ export default function PaletteStep({ palette, regions, suggesting, detail, onSu
           {palette.map((c) => (
             <div key={c.id} className="swatch-row">
               <span className="swatch" style={{ background: toHex(c.rgb) }}>
-                <input type="color" aria-label={`Edit ${c.name}`} value={toHex(c.rgb)} onChange={(e) => update(c.id, { rgb: fromHex(e.target.value) })} />
+                <input type="color" aria-label={`Edit ${c.name}`} value={toHex(c.rgb)} onChange={(e) => recolour(c.id, fromHex(e.target.value))} />
               </span>
               <input className="swatch-name" aria-label="Colour name" defaultValue={c.name} key={c.name}
                 onBlur={(e) => rename(c.id, e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.target.blur()} />

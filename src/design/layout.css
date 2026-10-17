@@ -949,3 +949,330 @@ kbd {
     padding: var(--space-4);
   }
 }
+
+/* Header actions */
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.topbar-actions .status-pill {
+  margin-right: var(--space-3);
+}
+
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.header-btn:hover,
+.header-btn[aria-expanded="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.header-btn .badge {
+  height: 18px;
+  padding: 0 6px;
+}
+
+/* Drawer */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(10, 10, 9, 0.32);
+  animation: fade-in var(--normal) var(--ease);
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: min(420px, 100vw);
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-3);
+  animation: slide-in var(--normal) var(--ease);
+  outline: none;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.drawer-head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+}
+
+.drawer-head p {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+.drawer-body {
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.drawer-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.settings-section h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.settings-section > .field-hint {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.paint-form {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.paint-form-fields {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.swatch-lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.text-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.text-input.mono {
+  font-size: var(--text-xs);
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* Paint chips in the colours step */
+
+.paint-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.paint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.paint-chip:hover {
+  border-color: var(--accent);
+}
+
+.paint-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.paint-chip i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.subhead:first-child {
+  margin-top: 0;
+}
+
+.subhead button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+/* History */
+
+.history-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.history-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.history-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-1);
+}
+
+.history-open {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-thumb {
+  width: 76px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.history-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.history-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+
+.history-meta strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-strip {
+  display: flex;
+  height: 6px;
+  margin: 2px 0;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.history-strip i {
+  flex: 1;
+}
+
+.notice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 900px) {
+  .header-btn span.label {
+    display: none;
+  }
+}

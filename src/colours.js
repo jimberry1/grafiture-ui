@@ -39,11 +39,14 @@ const NAMED = {
 
 const distance = (a, b) => a.reduce((sum, v, i) => sum + (v - b[i]) ** 2, 0)
 
-// The nearest readable name, made unique among `taken` with a numeric suffix.
-export function nameFor(rgb, taken = []) {
-  const [base] = Object.entries(NAMED).reduce((best, entry) =>
-    distance(entry[1], rgb) < distance(best[1], rgb) ? entry : best
-  )
+// A readable name for a colour, made unique among `taken` with a numeric suffix.
+// A saved paint of (nearly) the same colour lends its name; otherwise the nearest
+// common colour name is used.
+export function nameFor(rgb, taken = [], paints = []) {
+  const paint = paints.find((p) => distance(p.rgb, rgb) <= 12)
+  const [base] = paint
+    ? [slug(paint.name) || "paint"]
+    : Object.entries(NAMED).reduce((best, entry) => (distance(entry[1], rgb) < distance(best[1], rgb) ? entry : best))
   let name = base
   for (let i = 2; taken.includes(name); i++) name = `${base}-${i}`
   return name
@@ -58,7 +61,10 @@ export const slug = (text) =>
     .slice(0, 32)
 
 let nextId = 1
-export const paletteEntry = (rgb, taken) => ({ id: nextId++, rgb, name: nameFor(rgb, taken) })
+export const paletteEntry = (rgb, taken, paints) => ({ id: nextId++, rgb, name: nameFor(rgb, taken, paints) })
+
+// A palette colour restored as it was saved, with a fresh id.
+export const withId = ({ name, rgb }) => ({ id: nextId++, name, rgb })
 
 // Reads pixels from an image URL. The canvas is cached per URL, since sampling
 // happens on every mouse move over the stage.

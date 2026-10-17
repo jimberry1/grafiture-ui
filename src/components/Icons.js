@@ -92,6 +92,35 @@ export const Spray = (props) => (
   </Svg>
 )
 
+export const Gear = (props) => (
+  <Svg {...props}>
+    <circle cx="10" cy="10" r="2.5" />
+    <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4" />
+  </Svg>
+)
+
+export const Clock = (props) => (
+  <Svg {...props}>
+    <circle cx="10" cy="10" r="7" />
+    <path d="M10 6v4l2.5 2.5" />
+  </Svg>
+)
+
+export const Plus = (props) => (
+  <Svg {...props}>
+    <path d="M10 4.5v11M4.5 10h11" />
+  </Svg>
+)
+
+export const Palette = (props) => (
+  <Svg {...props}>
+    <path d="M10 3a7 7 0 1 0 0 14c1 0 1.5-.7 1.5-1.4 0-1-.9-1.3-.9-2.1 0-.8.7-1.5 1.5-1.5H14a3 3 0 0 0 3-3C17 5.6 13.9 3 10 3Z" />
+    <circle cx="6.5" cy="9.5" r="1" fill="currentColor" stroke="none" />
+    <circle cx="8.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="6.5" r="1" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
 // Small illustrations for the style cards.
 export const StyleArt = ({ style }) => {
   const common = { width: "100%", height: "100%", viewBox: "0 0 160 100", "aria-hidden": true }
