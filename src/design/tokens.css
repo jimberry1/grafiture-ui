@@ -1,0 +1,93 @@
+/* Design tokens. Every colour, radius, shadow and size in the app comes from here,
+   so light and dark themes are a matter of swapping these values. */
+
+:root {
+  /* type */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --text-xs: 11.5px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --leading: 1.45;
+
+  /* spacing, a 4px scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --fast: 120ms;
+  --normal: 200ms;
+
+  /* layout */
+  --topbar-height: 56px;
+  --panel-width: 384px;
+
+  /* colour: light */
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f1efeb;
+  --surface-3: #e9e6e0;
+  --border: #e3e0da;
+  --border-strong: #cfcbc3;
+  --text: #1b1a18;
+  --text-2: #66625b;
+  --text-3: #98948c;
+  --accent: #ff5a1f;
+  --accent-hover: #f04a0f;
+  --accent-ink: #ffffff;
+  --accent-soft: #fff0e9;
+  --accent-ring: rgba(255, 90, 31, 0.35);
+  --ok: #18864b;
+  --ok-soft: #e6f4ec;
+  --danger: #c9302c;
+  --danger-soft: #fdecea;
+  --checker-a: #ffffff;
+  --checker-b: #ecebe7;
+  --shadow-1: 0 1px 2px rgba(20, 18, 14, 0.06), 0 1px 1px rgba(20, 18, 14, 0.04);
+  --shadow-2: 0 4px 16px rgba(20, 18, 14, 0.08), 0 1px 3px rgba(20, 18, 14, 0.06);
+  --shadow-3: 0 18px 48px rgba(20, 18, 14, 0.18), 0 4px 12px rgba(20, 18, 14, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111110;
+    --surface: #1a1a18;
+    --surface-2: #222220;
+    --surface-3: #2b2a27;
+    --border: #2e2d2a;
+    --border-strong: #42403b;
+    --text: #f3f1ec;
+    --text-2: #aaa69d;
+    --text-3: #77736b;
+    --accent: #ff6a33;
+    --accent-hover: #ff7d4d;
+    --accent-ink: #160b05;
+    --accent-soft: rgba(255, 106, 51, 0.14);
+    --accent-ring: rgba(255, 106, 51, 0.45);
+    --ok: #4cc283;
+    --ok-soft: rgba(76, 194, 131, 0.14);
+    --danger: #ff6b63;
+    --danger-soft: rgba(255, 107, 99, 0.14);
+    --checker-a: #1e1e1c;
+    --checker-b: #262624;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.6);
+  }
+}
