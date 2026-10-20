@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { healthcheck, jobStatus, preview, submitJob } from "./api"
+import { healthcheck, jobStatus, preview, recommend, submitJob } from "./api"
 import { paletteEntry, suggestPalette, withId } from "./colours"
 import { Step } from "./components/Controls"
 import HistoryDrawer from "./components/HistoryDrawer"
@@ -63,6 +63,7 @@ export default function App() {
   const [strategy, setStrategy] = useState("paint-order")
   const [stencilOptions, setStencilOptions] = useState({})
   const [job, setJob] = useState(null)
+  const [recommendation, setRecommendation] = useState(null)
 
   const [openStep, setOpenStep] = useState(1)
   const [tab, setTab] = useState("original")
@@ -126,6 +127,14 @@ export default function App() {
       .catch((e) => e.name !== "AbortError" && setError(e.message))
       .finally(() => !signal.aborted && setLoading("preview", false))
   }, [baseOptions], 400)
+
+  // a strategy recommendation, fetched alongside the preview rather than after it
+  useDebouncedEffect((signal) => {
+    if (!file || palette.length === 0) { setRecommendation(null); return }
+    recommend({ ...baseOptions, ...stencilOptions }, { signal })
+      .then(setRecommendation)
+      .catch((e) => e.name !== "AbortError" && setRecommendation(null))
+  }, [baseOptions, JSON.stringify(stencilOptions)], 400)
 
   // follow the job until it finishes
   useEffect(() => {
@@ -292,7 +301,8 @@ export default function App() {
 
           <Step number={4} title="Stencil" open={openStep === 4} done={!!job?.manifest} locked={!file || palette.length === 0}
             onToggle={() => setOpenStep(openStep === 4 ? 0 : 4)} summary={strategyName}>
-            <StencilStep strategy={strategy} options={stencilOptions} onStrategy={setStrategy} onOptions={setStencilOptions} />
+            <StencilStep strategy={strategy} options={stencilOptions} recommendation={recommendation}
+              onStrategy={setStrategy} onOptions={setStencilOptions} />
           </Step>
 
           {error && <div className="alert" role="alert" style={{ marginTop: "var(--space-3)" }}><Alert size={18} /> {error}</div>}

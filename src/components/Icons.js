@@ -92,6 +92,13 @@ export const Spray = (props) => (
   </Svg>
 )
 
+export const Info = (props) => (
+  <Svg {...props}>
+    <circle cx="10" cy="10" r="7" />
+    <path d="M10 9v4.5M10 6.5v.2" />
+  </Svg>
+)
+
 export const Gear = (props) => (
   <Svg {...props}>
     <circle cx="10" cy="10" r="2.5" />
@@ -160,6 +167,50 @@ export const StyleArt = ({ style }) => {
               return <circle key={`${row}-${col}`} cx={x} cy={y} r="4.6" fill={inside ? (row < 4 ? "#f2b400" : "#e0761b") : "#5aa6dc"} />
             })
           )}
+        </svg>
+      )
+    case "halftone":
+      return (
+        <svg {...common}>
+          <rect width="160" height="100" fill="#fbfaf7" />
+          {Array.from({ length: 10 }, (_, r) => Array.from({ length: 16 }, (_, c) => (
+            <circle key={`${r}-${c}`} cx={6 + c * 10} cy={5 + r * 10} r={4.6 * (c / 16)} fill="#151412" />
+          )))}
+        </svg>
+      )
+    case "crosshatch":
+      return (
+        <svg {...common}>
+          <rect width="160" height="100" fill="#fbfaf7" />
+          <g stroke="#151412" strokeWidth="1.4">
+            {Array.from({ length: 26 }, (_, i) => <line key={`a${i}`} x1={i * 8 - 60} y1="0" x2={i * 8 + 40} y2="100" />)}
+            {Array.from({ length: 14 }, (_, i) => <line key={`b${i}`} x1={i * 8 + 60} y1="0" x2={i * 8 - 40} y2="100" />)}
+          </g>
+        </svg>
+      )
+    case "stained-glass":
+      return (
+        <svg {...common}>
+          <rect width="160" height="100" fill="#1e1e1e" />
+          {[["M2 2h50l-8 40H2z", "#3d6ea0"], ["M56 2h56l6 36-60 6z", "#e8c873"], ["M116 2h42v50l-36-10z", "#9cc7e8"], ["M2 46h40l14 52H2z", "#c0503a"], ["M48 48l60-6 4 56H60z", "#2c4a6b"], ["M116 46l42 10v42h-42z", "#6aa36a"]].map(([d, f]) => (
+            <path key={d} d={d} fill={f} />
+          ))}
+        </svg>
+      )
+    case "low-poly":
+      return (
+        <svg {...common}>
+          {[["0,0 60,0 30,50", "#9cc7e8"], ["60,0 30,50 100,40", "#7fb0d8"], ["60,0 160,0 100,40", "#b9d9f0"], ["160,0 100,40 160,60", "#8fbce0"], ["0,0 30,50 0,100", "#2c4a6b"], ["30,50 100,40 70,100", "#3d6ea0"], ["0,100 30,50 70,100", "#24405e"], ["100,40 160,60 70,100", "#4f80b0"], ["160,60 160,100 70,100", "#36618d"]].map(([pts, f]) => (
+            <polygon key={pts} points={pts} fill={f} />
+          ))}
+        </svg>
+      )
+    case "poster":
+      return (
+        <svg {...common}>
+          <rect width="160" height="100" fill="#e8d5a8" />
+          <path d="M0 70C40 40 70 30 100 45s45 10 60 0V100H0Z" fill="#c0392b" stroke="#141414" strokeWidth="4" />
+          <circle cx="58" cy="36" r="18" fill="#1d3557" stroke="#141414" strokeWidth="4" />
         </svg>
       )
     default:
