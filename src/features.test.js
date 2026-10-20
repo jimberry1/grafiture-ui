@@ -45,3 +45,46 @@ test("history opens with an empty state", () => {
   fireEvent.click(screen.getByRole("button", { name: /History/i }))
   expect(screen.getByText(/Stencils you create appear here/i)).toBeInTheDocument()
 })
+
+test("each strategy explains itself on hover", async () => {
+  const { default: StencilStep } = await import("./components/StencilStep")
+  render(<StencilStep strategy="paint-order" options={{}} onStrategy={() => {}} onOptions={() => {}} />)
+  for (const name of ["Paint order", "Stints", "Layers"]) {
+    const button = screen.getByRole("button", { name: `About ${name}` })
+    fireEvent.mouseEnter(button)
+    const tip = screen.getByRole("tooltip")
+    expect(within(tip).getByText("How it works")).toBeInTheDocument()
+    expect(within(tip).getByText("Best for")).toBeInTheDocument()
+    fireEvent.mouseLeave(button)
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+  }
+})
+
+test("tapping the info button does not change the strategy", async () => {
+  const { default: StencilStep } = await import("./components/StencilStep")
+  const onStrategy = jest.fn()
+  render(<StencilStep strategy="paint-order" options={{}} onStrategy={onStrategy} onOptions={() => {}} />)
+  fireEvent.click(screen.getByRole("button", { name: "About Layers" }))
+  expect(onStrategy).not.toHaveBeenCalled()
+  expect(screen.getByRole("tooltip")).toBeInTheDocument()
+})
+
+test("the recommended strategy is marked, with estimates and a way to switch", async () => {
+  const { default: StencilStep } = await import("./components/StencilStep")
+  const onStrategy = jest.fn()
+  const recommendation = {
+    recommended: "paint-order",
+    reason: "Paint order: 4 sheets + a base coat with no bridges; Stints would need 757 bridges.",
+    estimates: [
+      { strategy: "paint-order", sheets: 4, "base-coat": true, bridges: 0 },
+      { strategy: "layers", sheets: 6, "base-coat": false, bridges: 0 },
+      { strategy: "stints", sheets: 10, "base-coat": false, bridges: 757 },
+    ],
+  }
+  render(<StencilStep strategy="stints" options={{}} recommendation={recommendation} onStrategy={onStrategy} onOptions={() => {}} />)
+  expect(screen.getByText("Recommended: Paint order")).toBeInTheDocument()
+  expect(screen.getByText("≈ 4 sheets + base coat · no bridges")).toBeInTheDocument()
+  expect(screen.getByText("≈ 10 sheets · 757 bridges")).toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "Use it" }))
+  expect(onStrategy).toHaveBeenCalledWith("paint-order")
+})

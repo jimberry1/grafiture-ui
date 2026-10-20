@@ -25,6 +25,12 @@ function Lightbox({ jobId, sheet, onClose }) {
           <a className="btn btn-secondary btn-sm" href={jobFileUrl(jobId, file)} download={file}>
             <Download size={14} /> PNG
           </a>
+          {sheet["svg-file"] && (
+            <a className="btn btn-secondary btn-sm" href={jobFileUrl(jobId, sheet["svg-file"])} download={sheet["svg-file"]}>SVG</a>
+          )}
+          {sheet["dxf-file"] && (
+            <a className="btn btn-secondary btn-sm" href={jobFileUrl(jobId, sheet["dxf-file"])} download={sheet["dxf-file"]}>DXF</a>
+          )}
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Close /></button>
         </div>
       </div>

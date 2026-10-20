@@ -1,5 +1,6 @@
 import { NumberField, Segmented, Toggle } from "./Controls"
-import { ChevronRight } from "./Icons"
+import { ChevronRight, Sparkle } from "./Icons"
+import InfoTip from "./InfoTip"
 
 export const STRATEGIES = [
   {
@@ -22,7 +23,65 @@ export const STRATEGIES = [
   },
 ]
 
-export default function StencilStep({ strategy, options, onStrategy, onOptions }) {
+// What each strategy does, shown on hover. Figures are from the Great Wave example.
+const INFO = {
+  "paint-order": {
+    how: "Colours are ranked from the outside of the image inwards. The outermost is a base coat sprayed over the whole canvas, with no sheet. Every other colour gets one sheet that cuts its colour plus everything sprayed after it, so later colours land on top. Specks of an earlier colour trapped inside a later one are sprayed over, then put back by touch-up sheets at the end.",
+    best: "Images with a clear background colour and a fairly flat palette, and fine detail like foam, dots, text or contour lines.",
+    tradeoffs: "No bridges, so every sheet is sturdy. Expect a few touch-up sheets on top of one sheet per colour. Relies on paint that covers what's underneath.",
+    stat: "Great Wave: base coat + 4 sheets + 6 touch-ups, 0 bridges.",
+  },
+  stints: {
+    how: "One sheet per colour, each cutting only that colour, so every area is sprayed once. Pieces that would fall out are held on by thin bridges (stints). Cover-up sheets, at most one per colour, then re-spray the strips the bridges hid.",
+    best: "Big flat shapes with few enclosed bits, the fewest sheets to line up, or translucent paint that shouldn't overlap. Turn cover-ups off to keep the bridge lines as part of the look.",
+    tradeoffs: "Bridges are fiddly to cut on tiny detail and can tear, so avoid this for busy images like foam, dots or edges.",
+    stat: "Great Wave: 5 sheets + 5 cover-ups, 757 bridges.",
+  },
+  layers: {
+    how: "One sheet per colour per nesting level: white outside a black ring and white inside it become two white sheets. Each sheet cuts its regions plus everything inside them, and the largest sheets are sprayed first. No base coat.",
+    best: "Strongly nested designs, like rings within rings or outlines inside outlines, without a dominant background colour.",
+    tradeoffs: "No bridges. The sheet count grows with how deeply shapes nest rather than with the number of colours, and the background colour's first sheet can open nearly the whole canvas.",
+    stat: "Great Wave: 6 sheets + 5 touch-ups, 0 bridges.",
+  },
+}
+
+function StrategyInfo({ strategy }) {
+  const info = INFO[strategy.id]
+  return (
+    <InfoTip label={`About ${strategy.name}`}>
+      <h4>{strategy.name}</h4>
+      <dl>
+        <div><dt>How it works</dt><dd>{info.how}</dd></div>
+        <div><dt>Best for</dt><dd>{info.best}</dd></div>
+        <div><dt>Trade-offs</dt><dd>{info.tradeoffs}</dd></div>
+      </dl>
+      <p className="tip-stat">{info.stat}</p>
+    </InfoTip>
+  )
+}
+
+function estimateText({ sheets, "base-coat": baseCoat, bridges }) {
+  return `≈ ${sheets} sheet${sheets === 1 ? "" : "s"}${baseCoat ? " + base coat" : ""} · ${bridges === 0 ? "no bridges" : `${bridges} bridges`}`
+}
+
+function Recommendation({ recommendation, strategy, onStrategy }) {
+  const pick = STRATEGIES.find((s) => s.id === recommendation.recommended)
+  return (
+    <div className="recommendation" role="status">
+      <Sparkle size={16} />
+      <div>
+        <strong>Recommended: {pick?.name}</strong>
+        <span>{recommendation.reason}</span>
+      </div>
+      {strategy !== recommendation.recommended && (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onStrategy(recommendation.recommended)}>Use it</button>
+      )}
+    </div>
+  )
+}
+
+export default function StencilStep({ strategy, options, recommendation, onStrategy, onOptions }) {
+  const estimates = Object.fromEntries((recommendation?.estimates || []).map((e) => [e.strategy, e]))
   const set = (key) => (value) => onOptions({ ...options, [key]: value })
   const usesStints =
     strategy === "stints" ||
@@ -37,14 +96,20 @@ export default function StencilStep({ strategy, options, onStrategy, onOptions }
 
   return (
     <>
+      {recommendation && <Recommendation recommendation={recommendation} strategy={strategy} onStrategy={onStrategy} />}
+
       <div className="strategy-list" role="radiogroup" aria-label="Strategy">
         {STRATEGIES.map((s) => (
           <label key={s.id} className={`strategy-card${strategy === s.id ? " is-selected" : ""}`}>
             <input type="radio" name="strategy" value={s.id} checked={strategy === s.id} onChange={() => onStrategy(s.id)} />
             <strong>
-              {s.name} <span className={`badge${strategy === s.id ? " badge-accent" : ""}`}>{s.badge}</span>
+              <span className="strategy-name">{s.name}</span>
+              <span className={`badge${strategy === s.id ? " badge-accent" : ""}`}>{s.badge}</span>
+              {recommendation?.recommended === s.id && <span className="badge badge-ok">Recommended</span>}
+              <StrategyInfo strategy={s} />
             </strong>
             <p>{s.blurb}</p>
+            {estimates[s.id] && <p className="estimate">{estimateText(estimates[s.id])}</p>}
           </label>
         ))}
       </div>
@@ -69,6 +134,10 @@ export default function StencilStep({ strategy, options, onStrategy, onOptions }
             <NumberField label="Sheet budget" hint="Max sheets per colour" min={1} max={100}
               value={options["max-sheets-per-colour"]} placeholder="none" onChange={set("max-sheets-per-colour")} />
           )}
+          <Toggle label="Export for cutters (SVG + DXF)" checked={options.vectors ?? false} onChange={set("vectors")} />
+          <span className="field-hint" style={{ marginTop: "calc(-1 * var(--space-2))" }}>
+            Traced cut lines with registration holes, at print size when a print width is set.
+          </span>
           <NumberField label="Print width" hint="Finished width in mm; sizes below switch to mm" min={10} max={100000}
             value={options["print-width-mm"]} placeholder="none" onChange={setPrintWidth} />
           {usesStints && (

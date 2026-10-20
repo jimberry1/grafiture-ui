@@ -45,6 +45,14 @@ export async function preview(options, { view, signal }) {
   return { url: URL.createObjectURL(await response.blob()), regions: regions ? Number(regions) : null }
 }
 
+// Which strategy suits the image, with estimated sheets and bridges for each. Runs on
+// the server off the job queue, so it never delays stencil creation.
+export async function recommend(options, { signal } = {}) {
+  const response = await fetch(`${API_URL}/api/recommend`, { method: "POST", body: stencilForm(options), signal })
+  if (!response.ok) throw new Error(await errorMessage(response))
+  return response.json()
+}
+
 export async function submitJob(options) {
   const response = await fetch(`${API_URL}/api/jobs`, { method: "POST", body: stencilForm(options) })
   if (!response.ok) throw new Error(await errorMessage(response))
