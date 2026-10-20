@@ -64,7 +64,32 @@ let nextId = 1
 export const paletteEntry = (rgb, taken, paints) => ({ id: nextId++, rgb, name: nameFor(rgb, taken, paints) })
 
 // A palette colour restored as it was saved, with a fresh id.
-export const withId = ({ name, rgb }) => ({ id: nextId++, name, rgb })
+export const withId = ({ name, rgb, mapTo }) => ({ id: nextId++, name, rgb, ...(mapTo ? { mapTo } : {}) })
+
+// ---- recolouring: what paint each matched colour is sprayed as ----
+
+export const sprayed = (c) => c.mapTo || c.rgb
+export const sameColour = (a, b) => toHex(a) === toHex(b)
+export const invert = ([r, g, b]) => [255 - r, 255 - g, 255 - b]
+export const grey = (rgb) => { const v = Math.round(lightness(rgb) * 255); return [v, v, v] }
+
+// Every colour moves to another's paint, so a shuffle always changes the picture.
+export function shuffled(palette) {
+  const paints = palette.map(sprayed)
+  if (paints.length < 2) return palette
+  const shift = 1 + Math.floor(Math.random() * (paints.length - 1))
+  return palette.map((c, i) => ({ ...c, mapTo: paints[(i + shift) % paints.length] }))
+}
+
+// Groups of colours that end up the same paint, so share a sheet.
+export function mergedGroups(palette) {
+  const groups = new Map()
+  palette.forEach((c) => {
+    const key = toHex(sprayed(c))
+    groups.set(key, [...(groups.get(key) || []), c])
+  })
+  return [...groups.values()].filter((g) => g.length > 1)
+}
 
 // Reads pixels from an image URL. The canvas is cached per URL, since sampling
 // happens on every mouse move over the stage.

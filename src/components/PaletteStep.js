@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { fromHex, nameFor, paletteEntry, slug, toHex } from "../colours"
+import { fromHex, grey, invert, mergedGroups, nameFor, paletteEntry, sameColour, shuffled, slug, sprayed, toHex } from "../colours"
+import ColourPopover from "./ColourPopover"
 import { Slider } from "./Controls"
-import { Copy, Pipette, Sparkle, Trash } from "./Icons"
+import { ArrowRight, Copy, Pipette, Sparkle, Trash } from "./Icons"
 
 // Detail is the inverse of the server's min-region-size: higher keeps smaller regions.
 export const DETAIL_LEVELS = [
@@ -15,6 +16,7 @@ export const DETAIL_LEVELS = [
 export default function PaletteStep({ palette, paints, regions, suggesting, detail, onSuggest, onChange, onDetail, onManagePaints }) {
   const [count, setCount] = useState(4)
   const [copied, setCopied] = useState(false)
+  const [picking, setPicking] = useState(null) // { id, anchor }
 
   const update = (id, patch) => onChange(palette.map((c) => (c.id === id ? { ...c, ...patch } : c)))
 
@@ -23,6 +25,19 @@ export default function PaletteStep({ palette, paints, regions, suggesting, deta
     const taken = palette.filter((c) => c.id !== id).map((c) => c.name)
     update(id, { rgb, name: nameFor(rgb, taken, paints) })
   }
+
+  // the paint a colour is sprayed as; the same as the colour it matches means no mapping
+  const setSprayed = (id, rgb) => {
+    const c = palette.find((p) => p.id === id)
+    update(id, { mapTo: rgb && !sameColour(rgb, c.rgb) ? rgb : undefined })
+  }
+  const recolourAll = (f) => onChange(palette.map((c) => {
+    const rgb = f(c)
+    return { ...c, mapTo: rgb && !sameColour(rgb, c.rgb) ? rgb : undefined }
+  }))
+  const anyMapped = palette.some((c) => c.mapTo)
+  const merges = mergedGroups(palette)
+  const pickingColour = picking && palette.find((c) => c.id === picking.id)
 
   const inPalette = new Set(palette.map((c) => toHex(c.rgb)))
   const addPaint = (paint) =>
@@ -86,22 +101,49 @@ export default function PaletteStep({ palette, paints, regions, suggesting, deta
         </div>
       ) : (
         <div className="swatches">
+          <div className="swatch-head" aria-hidden="true">
+            <span>Matches</span>
+            <span />
+            <span>Sprayed as</span>
+          </div>
           {palette.map((c) => (
-            <div key={c.id} className="swatch-row">
-              <span className="swatch" style={{ background: toHex(c.rgb) }}>
+            <div key={c.id} className="swatch-row recolour-row">
+              <span className="swatch" style={{ background: toHex(c.rgb) }} title={`Matches ${toHex(c.rgb)}`}>
                 <input type="color" aria-label={`Edit ${c.name}`} value={toHex(c.rgb)} onChange={(e) => recolour(c.id, fromHex(e.target.value))} />
               </span>
               <input className="swatch-name" aria-label="Colour name" defaultValue={c.name} key={c.name}
                 onBlur={(e) => rename(c.id, e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.target.blur()} />
-              <span className="swatch-hex">{toHex(c.rgb)}</span>
+              <ArrowRight size={14} className="recolour-arrow" />
+              <button type="button" className={`swatch spray-swatch${c.mapTo ? " is-mapped" : ""}`}
+                style={{ background: toHex(sprayed(c)) }}
+                aria-label={c.mapTo ? `${c.name} is sprayed as ${toHex(c.mapTo)}; change` : `Spray ${c.name} as another colour`}
+                aria-expanded={picking?.id === c.id}
+                onClick={(e) => setPicking(picking?.id === c.id ? null : { id: c.id, anchor: e.currentTarget })}>
+                {!c.mapTo && <span className="spray-same">=</span>}
+              </button>
               <button type="button" className="icon-btn" aria-label={`Remove ${c.name}`} onClick={() => onChange(palette.filter((p) => p.id !== c.id))}>
                 <Trash size={16} />
               </button>
             </div>
           ))}
-          <div className="palette-strip" aria-hidden="true">
-            {palette.map((c) => <span key={c.id} style={{ background: toHex(c.rgb) }} />)}
+
+          <div className="recolour-bar">
+            <span className="field-label">Recolour</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange(shuffled(palette))} disabled={palette.length < 2}>Shuffle</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => recolourAll((c) => invert(c.rgb))}>Invert</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => recolourAll((c) => grey(c.rgb))}>Greyscale</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => recolourAll(() => null)} disabled={!anyMapped}>Reset</button>
           </div>
+
+          <div className="palette-strip" aria-hidden="true">
+            {palette.map((c) => <span key={c.id} style={{ background: toHex(sprayed(c)) }} />)}
+          </div>
+          {merges.map((group) => (
+            <p key={group.map((c) => c.id).join()} className="field-hint merge-note">
+              <i className="mini-swatch" style={{ background: toHex(sprayed(group[0])) }} />
+              {group.map((c) => c.name).join(" and ")} share a paint, so they share a sheet.
+            </p>
+          ))}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "var(--space-2)" }}>
             <button type="button" className="btn btn-ghost btn-sm" onClick={copyEdn}>
               <Copy size={14} /> {copied ? "Copied" : "Copy as EDN"}
@@ -109,6 +151,20 @@ export default function PaletteStep({ palette, paints, regions, suggesting, deta
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([])}>Clear</button>
           </div>
         </div>
+      )}
+
+      {pickingColour && (
+        <ColourPopover
+          anchor={picking.anchor}
+          title={`Spray ${pickingColour.name} as`}
+          value={sprayed(pickingColour)}
+          original={pickingColour.rgb}
+          paints={paints}
+          others={palette.filter((c) => c.id !== pickingColour.id).map((c) => ({ id: c.id, name: c.name, rgb: sprayed(c) }))}
+          onPick={(rgb) => setSprayed(pickingColour.id, rgb)}
+          onReset={() => { setSprayed(pickingColour.id, null); setPicking(null) }}
+          onClose={() => setPicking(null)}
+        />
       )}
 
       <div className="style-options">

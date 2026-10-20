@@ -111,3 +111,93 @@ test("the recommended choice is marked, with estimates and a way to switch", asy
   expect(onStrategy).toHaveBeenCalledWith("paint-order")
   expect(onOptions).toHaveBeenCalledWith({ islands: "touch-up" })
 })
+
+test("recolouring helpers", async () => {
+  const { shuffled, mergedGroups, invert, grey, sprayed } = await import("./colours")
+  const palette = [
+    { id: 1, name: "navy", rgb: [28, 48, 96] },
+    { id: 2, name: "paper", rgb: [236, 226, 200] },
+    { id: 3, name: "red", rgb: [200, 40, 40] },
+  ]
+  const s = shuffled(palette)
+  s.forEach((c, i) => expect(sprayed(c)).not.toEqual(palette[i].rgb))
+  expect(new Set(s.map((c) => sprayed(c).join()))).toEqual(new Set(palette.map((c) => c.rgb.join())))
+  expect(invert([0, 100, 255])).toEqual([255, 155, 0])
+  expect(grey([255, 255, 255])).toEqual([255, 255, 255])
+  expect(mergedGroups([...palette, { id: 4, name: "ink", rgb: [10, 10, 10], mapTo: [28, 48, 96] }]).map((g) => g.map((c) => c.name)))
+    .toEqual([["navy", "ink"]])
+})
+
+test("only recoloured colours are sent as the colour map", async () => {
+  const { stencilForm } = await import("./api")
+  const form = stencilForm({
+    file: new Blob(["x"]),
+    palette: [
+      { name: "navy", rgb: [28, 48, 96], mapTo: [200, 0, 0] },
+      { name: "paper", rgb: [236, 226, 200] },
+      { name: "red", rgb: [200, 40, 40], mapTo: [200, 40, 40] },
+    ],
+  })
+  expect(JSON.parse(form.get("colour-map"))).toEqual({ navy: [200, 0, 0] })
+  expect(stencilForm({ file: new Blob(["x"]), palette: [{ name: "paper", rgb: [1, 2, 3] }] }).get("colour-map")).toBeNull()
+})
+
+test("a colour can be sprayed as another palette colour, then reset", async () => {
+  const { default: PaletteStep } = await import("./components/PaletteStep")
+  const onChange = jest.fn()
+  const palette = [
+    { id: 1, name: "navy", rgb: [28, 48, 96] },
+    { id: 2, name: "charcoal", rgb: [80, 80, 84] },
+  ]
+  const { rerender } = render(<PaletteStep palette={palette} paints={[]} detail={2} onSuggest={() => {}} onChange={onChange} onDetail={() => {}} onManagePaints={() => {}} />)
+  fireEvent.click(screen.getByRole("button", { name: "Spray charcoal as another colour" }))
+  const picker = screen.getByRole("dialog", { name: "Spray charcoal as" })
+  fireEvent.click(within(picker).getByRole("button", { name: /navy/ }))
+  expect(onChange).toHaveBeenLastCalledWith([palette[0], { ...palette[1], mapTo: [28, 48, 96] }])
+
+  rerender(<PaletteStep palette={[palette[0], { ...palette[1], mapTo: [28, 48, 96] }]} paints={[]} detail={2} onSuggest={() => {}} onChange={onChange} onDetail={() => {}} onManagePaints={() => {}} />)
+  expect(screen.getByText(/navy and charcoal share a paint/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "Reset" }))
+  expect(onChange).toHaveBeenLastCalledWith([{ ...palette[0], mapTo: undefined }, { ...palette[1], mapTo: undefined }])
+})
+
+test("composite sprays selected sheets in order onto bare card", async () => {
+  const { composite, CARD } = await import("./composite")
+  const pixel = (out, i) => Array.from(out.slice(4 * i, 4 * i + 3))
+  const sheets = [
+    { order: 1, colour: "paper", kind: "base" },
+    { order: 2, colour: "navy", file: "navy.png" },
+    { order: 3, colour: "red", file: "red.png" },
+  ]
+  const masks = { "navy.png": Uint8Array.from([0, 1, 1]), "red.png": Uint8Array.from([0, 0, 1]) }
+  const colours = { paper: [250, 250, 250], navy: [0, 0, 100], red: [200, 0, 0] }
+  const all = composite({ width: 3, height: 1, sheets, masks, colourOf: (s) => colours[s.colour] })
+  expect([0, 1, 2].map((i) => pixel(all, i))).toEqual([[250, 250, 250], [0, 0, 100], [200, 0, 0]])
+  const noBase = composite({ width: 3, height: 1, sheets: sheets.slice(1), masks, colourOf: (s) => colours[s.colour] })
+  expect(pixel(noBase, 0)).toEqual(CARD)
+  const recoloured = composite({ width: 3, height: 1, sheets, masks, colourOf: (s) => (s.colour === "red" ? [0, 200, 0] : colours[s.colour]) })
+  expect(pixel(recoloured, 2)).toEqual([0, 200, 0])
+})
+
+test("sheets can be left out of the combined preview", async () => {
+  const { default: SheetsView } = await import("./components/SheetsView")
+  const job = {
+    id: "j1",
+    status: "done",
+    manifest: {
+      width: 4, height: 4, margin: 2, units: "px",
+      palette: { paper: [250, 250, 250], navy: [0, 0, 100] },
+      stats: { "sheet-count": 2, "floating-pieces": 0, strategy: "stints", bridges: 0, style: "none", regions: 2, "timings-ms": {} },
+      sheets: [
+        { order: 1, name: "paper", colour: "paper", kind: "sheet", file: "paper.png", "view-file": "paper-view.png" },
+        { order: 2, name: "navy", colour: "navy", kind: "sheet", file: "navy.png", "view-file": "navy-view.png" },
+      ],
+    },
+  }
+  render(<SheetsView job={job} />)
+  expect(screen.getByRole("button", { name: /Combine all sheets/ })).toBeEnabled()
+  fireEvent.click(screen.getByRole("checkbox", { name: "Include navy in the preview" }))
+  expect(screen.getByRole("button", { name: /Combine 1 of 2/ })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "None" }))
+  expect(screen.getByRole("button", { name: /Combine 0 of 2/ })).toBeDisabled()
+})

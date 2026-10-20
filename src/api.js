@@ -22,6 +22,9 @@ export function stencilForm({ file, palette, maxSize, style, styleOptions, minRe
   form.append("image", file)
   if (palette && palette.length) {
     form.append("key-colours", JSON.stringify(Object.fromEntries(palette.map((c) => [c.name, c.rgb]))))
+    // colours sprayed as a different paint than the one they match
+    const recoloured = palette.filter((c) => c.mapTo && c.mapTo.join() !== c.rgb.join())
+    if (recoloured.length) form.append("colour-map", JSON.stringify(Object.fromEntries(recoloured.map((c) => [c.name, c.mapTo]))))
   }
   if (maxSize) form.append("max-size", String(maxSize))
   if (style && style !== "none") {

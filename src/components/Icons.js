@@ -92,6 +92,12 @@ export const Spray = (props) => (
   </Svg>
 )
 
+export const ArrowRight = (props) => (
+  <Svg {...props}>
+    <path d="M4 10h11M11 6l4 4-4 4" />
+  </Svg>
+)
+
 export const Info = (props) => (
   <Svg {...props}>
     <circle cx="10" cy="10" r="7" />

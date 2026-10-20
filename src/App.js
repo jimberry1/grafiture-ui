@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { healthcheck, jobStatus, preview, recommend, submitJob } from "./api"
-import { paletteEntry, suggestPalette, withId } from "./colours"
+import { paletteEntry, sameColour, sprayed, suggestPalette, withId } from "./colours"
 import { Step } from "./components/Controls"
 import HistoryDrawer from "./components/HistoryDrawer"
 import { Alert, Clock, Gear, Logo, Spray } from "./components/Icons"
@@ -170,10 +170,20 @@ export default function App() {
   // what the current settings would send, to tell when shown sheets are out of date
   const settingsKey = JSON.stringify({
     file: file && [file.name, file.size, file.lastModified],
-    palette: palette.map((c) => [c.name, c.rgb]),
+    palette: palette.map((c) => [c.name, c.rgb, c.mapTo || null]),
     maxSize, style, styleOptions: currentStyleOptions, minRegionSize, strategy, stencilOptions,
   })
   const [madeWith, setMadeWith] = useState(null)
+
+  // paints swapped in the spray preview become the palette's spray-as colours
+  const applyColours = (changes) => {
+    setPalette((p) => p.map((c) => {
+      const change = changes.find(({ from }) => sameColour(from, sprayed(c)))
+      if (!change) return c
+      return { ...c, mapTo: sameColour(change.to, c.rgb) ? undefined : change.to }
+    }))
+    setOpenStep(3)
+  }
 
   const createStencil = async () => {
     setError(null)
@@ -200,7 +210,7 @@ export default function App() {
         file,
         fileName: file.name,
         thumb,
-        palette: palette.map(({ name, rgb }) => ({ name, rgb })),
+        palette: palette.map(({ name, rgb, mapTo }) => ({ name, rgb, ...(mapTo ? { mapTo } : {}) })),
         style,
         styleOptions: currentStyleOptions,
         maxSize,
@@ -340,7 +350,8 @@ export default function App() {
           {!file ? (
             <Stage.Empty />
           ) : tab === "sheets" && job ? (
-            <SheetsView job={job} stale={job.status === "done" && madeWith !== null && madeWith !== settingsKey} onRecreate={createStencil} />
+            <SheetsView job={job} stale={job.status === "done" && madeWith !== null && madeWith !== settingsKey} onRecreate={createStencil}
+              paints={paints} onApplyColours={applyColours} />
           ) : stageUrl ? (
             <Stage.Image url={stageUrl} picking={tab !== "preview"} pixelated={tab === "preview"} onPick={addColour} />
           ) : error ? (

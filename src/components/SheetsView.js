@@ -3,6 +3,7 @@ import { jobFileUrl, jobZipUrl } from "../api"
 import { lightness } from "../colours"
 import { Segmented } from "./Controls"
 import { Alert, Check, Close, Download, Spray } from "./Icons"
+import SprayPreview from "./SprayPreview"
 
 // The traced vector outline of a sheet, drawn inline so its hairline cut lines can be
 // thickened for viewing (cutters want hairlines; screens need something visible).
@@ -103,8 +104,23 @@ function SheetCard({ jobId, sheet, rgb, onOpen }) {
   )
 }
 
-export default function SheetsView({ job, stale, onRecreate }) {
+export default function SheetsView({ job, stale, onRecreate, paints = [], onApplyColours }) {
   const [open, setOpen] = useState(null)
+  const [previewing, setPreviewing] = useState(false)
+  // which sheets to spray in the preview, by order; all of them for each new job
+  const [selected, setSelected] = useState(new Set())
+  const [colours, setColours] = useState({})
+  const allOrders = job.manifest ? job.manifest.sheets.map((s) => s.order) : []
+  useEffect(() => {
+    setSelected(new Set(allOrders))
+    setColours({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.id, job.manifest])
+  const toggle = (order) => setSelected((cur) => {
+    const next = new Set(cur)
+    next.has(order) ? next.delete(order) : next.add(order)
+    return next
+  })
 
   if (job.status === "queued" || job.status === "running" || job.status === "submitting") {
     return (
@@ -150,13 +166,31 @@ export default function SheetsView({ job, stale, onRecreate }) {
             <span className="badge">{(totalMs / 1000).toFixed(1)} s</span>
           </div>
         </div>
-        <a className="btn btn-primary" href={jobZipUrl(id)} download>
-          <Download size={16} /> Download all{cutFiles ? " (PNG, SVG, DXF)" : ""}
-        </a>
+        <div className="sheets-actions">
+          <button type="button" className="btn btn-primary" onClick={() => setPreviewing(true)} disabled={selected.size === 0}>
+            <Spray size={16} /> Combine {selected.size === manifest.sheets.length ? "all sheets" : `${selected.size} of ${manifest.sheets.length}`}
+          </button>
+          <a className="btn btn-secondary" href={jobZipUrl(id)} download>
+            <Download size={16} /> Download all{cutFiles ? " (PNG, SVG, DXF)" : ""}
+          </a>
+        </div>
+      </div>
+      <div className="select-bar">
+        <span className="field-hint">Untick sheets to leave them out of the combined preview.</span>
+        <span>
+          <button type="button" onClick={() => setSelected(new Set(allOrders))}>Select all</button>{" · "}
+          <button type="button" onClick={() => setSelected(new Set())}>None</button>
+        </span>
       </div>
       <div className="sheet-grid">
         {manifest.sheets.map((sheet) => (
-          <SheetCard key={sheet.order} jobId={id} sheet={sheet} rgb={manifest.palette[sheet.colour]} onOpen={() => setOpen(sheet)} />
+          <div key={sheet.order} className={`sheet-item${selected.has(sheet.order) ? "" : " is-off"}`}>
+            <label className="sheet-check" title={selected.has(sheet.order) ? "Leave out of the preview" : "Include in the preview"}>
+              <input type="checkbox" checked={selected.has(sheet.order)} onChange={() => toggle(sheet.order)}
+                aria-label={`Include ${sheet.name} in the preview`} />
+            </label>
+            <SheetCard jobId={id} sheet={sheet} rgb={colours[sheet.colour] || manifest.palette[sheet.colour]} onOpen={() => setOpen(sheet)} />
+          </div>
         ))}
       </div>
       <p className="field-hint">
@@ -164,6 +198,21 @@ export default function SheetsView({ job, stale, onRecreate }) {
         {cutFiles && " Cut files mark cuts in red, the sheet outline in blue and registration holes in green: pin the sheets through the holes to line them up."}
       </p>
       {open && <Lightbox jobId={id} sheet={open} onClose={() => setOpen(null)} />}
+      {previewing && (
+        <SprayPreview
+          jobId={id}
+          manifest={manifest}
+          selected={selected}
+          onToggle={toggle}
+          onSelectAll={(all) => setSelected(all ? new Set(allOrders) : new Set())}
+          colours={colours}
+          onColour={(key, rgb) => setColours((c) => { const next = { ...c }; if (rgb) next[key] = rgb; else delete next[key]; return next })}
+          onResetColours={() => setColours({})}
+          onApply={(changes) => { onApplyColours?.(changes); setPreviewing(false) }}
+          paints={paints}
+          onClose={() => setPreviewing(false)}
+        />
+      )}
     </div>
   )
 }
