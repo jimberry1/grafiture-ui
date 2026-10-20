@@ -46,21 +46,20 @@ test("history opens with an empty state", () => {
   expect(screen.getByText(/Stencils you create appear here/i)).toBeInTheDocument()
 })
 
-test("each strategy explains itself on hover", async () => {
+test("each way of making sheets explains itself on hover", async () => {
   const { default: StencilStep } = await import("./components/StencilStep")
   render(<StencilStep strategy="paint-order" options={{}} onStrategy={() => {}} onOptions={() => {}} />)
-  for (const name of ["Paint order", "Stints", "Layers"]) {
+  for (const name of ["Paint order", "Paint order + bridges", "Layers", "Stints"]) {
     const button = screen.getByRole("button", { name: `About ${name}` })
     fireEvent.mouseEnter(button)
     const tip = screen.getByRole("tooltip")
     expect(within(tip).getByText("How it works")).toBeInTheDocument()
-    expect(within(tip).getByText("Best for")).toBeInTheDocument()
     fireEvent.mouseLeave(button)
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
   }
 })
 
-test("tapping the info button does not change the strategy", async () => {
+test("tapping an info button does not change the choice", async () => {
   const { default: StencilStep } = await import("./components/StencilStep")
   const onStrategy = jest.fn()
   render(<StencilStep strategy="paint-order" options={{}} onStrategy={onStrategy} onOptions={() => {}} />)
@@ -69,22 +68,46 @@ test("tapping the info button does not change the strategy", async () => {
   expect(screen.getByRole("tooltip")).toBeInTheDocument()
 })
 
-test("the recommended strategy is marked, with estimates and a way to switch", async () => {
+test("the grid maps each cell to a strategy and island handling", async () => {
   const { default: StencilStep } = await import("./components/StencilStep")
   const onStrategy = jest.fn()
+  const onOptions = jest.fn()
+  render(<StencilStep strategy="layers" options={{ islands: "touch-up", margin: 10 }} onStrategy={onStrategy} onOptions={onOptions} />)
+  fireEvent.click(screen.getByText("Paint order + bridges"))
+  expect(onStrategy).toHaveBeenLastCalledWith("paint-order")
+  expect(onOptions).toHaveBeenLastCalledWith({ islands: "bridge", margin: 10 })
+  fireEvent.click(screen.getByText("Stints"))
+  expect(onStrategy).toHaveBeenLastCalledWith("stints")
+  expect(onOptions).toHaveBeenLastCalledWith({ margin: 10 })
+})
+
+test("bridge options only show for the bridged choices", async () => {
+  const { default: StencilStep } = await import("./components/StencilStep")
+  const { rerender } = render(<StencilStep strategy="paint-order" options={{}} onStrategy={() => {}} onOptions={() => {}} />)
+  expect(screen.queryByText("Cover-up sheets for bridges")).not.toBeInTheDocument()
+  rerender(<StencilStep strategy="paint-order" options={{ islands: "bridge" }} onStrategy={() => {}} onOptions={() => {}} />)
+  expect(screen.getByText("Cover-up sheets for bridges")).toBeInTheDocument()
+})
+
+test("the recommended choice is marked, with estimates and a way to switch", async () => {
+  const { default: StencilStep } = await import("./components/StencilStep")
+  const onStrategy = jest.fn()
+  const onOptions = jest.fn()
   const recommendation = {
     recommended: "paint-order",
-    reason: "Paint order: 4 sheets + a base coat with no bridges; Stints would need 757 bridges.",
+    reason: "Paint order: 8 sheets + a base coat with no bridges; Stints would need 757 bridges.",
     estimates: [
-      { strategy: "paint-order", sheets: 4, "base-coat": true, bridges: 0 },
-      { strategy: "layers", sheets: 6, "base-coat": false, bridges: 0 },
+      { strategy: "paint-order", sheets: 8, "base-coat": true, bridges: 0 },
+      { strategy: "layers", sheets: 10, "base-coat": false, bridges: 0 },
+      { strategy: "paint-order-bridges", sheets: 8, "base-coat": true, bridges: 319 },
       { strategy: "stints", sheets: 10, "base-coat": false, bridges: 757 },
     ],
   }
-  render(<StencilStep strategy="stints" options={{}} recommendation={recommendation} onStrategy={onStrategy} onOptions={() => {}} />)
+  render(<StencilStep strategy="stints" options={{}} recommendation={recommendation} onStrategy={onStrategy} onOptions={onOptions} />)
   expect(screen.getByText("Recommended: Paint order")).toBeInTheDocument()
-  expect(screen.getByText("≈ 4 sheets + base coat · no bridges")).toBeInTheDocument()
+  expect(screen.getByText("≈ 8 sheets + base · no bridges")).toBeInTheDocument()
   expect(screen.getByText("≈ 10 sheets · 757 bridges")).toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Use it" }))
   expect(onStrategy).toHaveBeenCalledWith("paint-order")
+  expect(onOptions).toHaveBeenCalledWith({ islands: "touch-up" })
 })

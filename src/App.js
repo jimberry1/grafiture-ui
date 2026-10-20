@@ -8,7 +8,7 @@ import ImageStep from "./components/ImageStep"
 import PaletteStep, { DETAIL_LEVELS } from "./components/PaletteStep"
 import SheetsView from "./components/SheetsView"
 import Stage from "./components/Stage"
-import StencilStep, { STRATEGIES } from "./components/StencilStep"
+import StencilStep, { choiceFor } from "./components/StencilStep"
 import SettingsDrawer from "./components/SettingsDrawer"
 import StyleStep, { DEFAULT_STYLE_OPTIONS, STYLES } from "./components/StyleStep"
 import { clearHistory, deleteHistoryEntry, loadHistory, loadPaints, saveHistoryEntry, savePaints, thumbnail } from "./storage"
@@ -167,9 +167,18 @@ export default function App() {
     }
   }
 
+  // what the current settings would send, to tell when shown sheets are out of date
+  const settingsKey = JSON.stringify({
+    file: file && [file.name, file.size, file.lastModified],
+    palette: palette.map((c) => [c.name, c.rgb]),
+    maxSize, style, styleOptions: currentStyleOptions, minRegionSize, strategy, stencilOptions,
+  })
+  const [madeWith, setMadeWith] = useState(null)
+
   const createStencil = async () => {
     setError(null)
     setNotice(null)
+    setMadeWith(settingsKey)
     setJob({ status: "submitting" })
     setTab("sheets")
     try {
@@ -246,7 +255,7 @@ export default function App() {
   const canCreate = file && palette.length > 0 && apiUp !== false && !["submitting", "queued", "running"].includes(job?.status)
 
   const styleName = STYLES.find((s) => s.id === style)?.name
-  const strategyName = STRATEGIES.find((s) => s.id === strategy)?.name
+  const strategyName = choiceFor(strategy, stencilOptions).name
 
   return (
     <div className="app">
@@ -331,7 +340,7 @@ export default function App() {
           {!file ? (
             <Stage.Empty />
           ) : tab === "sheets" && job ? (
-            <SheetsView job={job} />
+            <SheetsView job={job} stale={job.status === "done" && madeWith !== null && madeWith !== settingsKey} onRecreate={createStencil} />
           ) : stageUrl ? (
             <Stage.Image url={stageUrl} picking={tab !== "preview"} pixelated={tab === "preview"} onPick={addColour} />
           ) : error ? (
